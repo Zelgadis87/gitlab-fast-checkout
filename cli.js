@@ -8,6 +8,7 @@ const a = 1 // eslint-disable-line no-unused-vars
 	, lodash = require( 'lodash' )
 	, process = require( 'process' )
 	, yargs = require( 'yargs' )
+	, yargsUnparser = require( 'yargs-unparser' )
 	;
 
 async function execute( cmd ) {
@@ -42,15 +43,17 @@ async function wrap( fn ) {
 function rethrow( reason ) {
 	return function( cause ) {
 		const separator = '  ', err = new Error( reason );
-		err.stack += '\nCaused by:\n' + separator + cause.stack.replace( /\n/g, '\n' + separator );
+		err.message = reason;
+		err.stack = reason + '\nCaused by:\n' + separator + cause.stack.replace( /\n/g, '\n' + separator );
 		throw err;
 	};
 }
 
 async function handleCheckout( args ) {
 
-	let { remoteName, issueNumber, selectBranch } = args;
-	
+	let command = [ args.$0, ...yargsUnparser( args, { command: '<issueNumber>', default: { remoteName: 'origin' } } ) ].join( ' ' );
+	let { remoteName, issueNumber, selectBranch, rebase } = args;
+
 	const remoteRegEx = new RegExp( `^${ remoteName }/(${ issueNumber }-[A-z0-9-]+)$` );
 
 	await gitFetchRemote( remoteName ).catch( rethrow( 'Failed to fetch remote repository' ) );
@@ -67,12 +70,12 @@ async function handleCheckout( args ) {
 		throw new Error( `No branch found for issue ${ issueNumber }. Please ensure the issue number is correct and that a branch has been created using default name settings.` );
 	} else if ( remoteBranches.length > 1 ) {
 		if ( selectBranch === null )
-			throw new Error( `${ remoteBranches.length } branches found for issue ${ issueNumber }:\n${ remoteBranches.map( ( v, i ) => `${ i+1 }. ${ v }` ).join( '\n' ) }\n\nUse --selectBranch <name> to select the correct branch.` );
+			throw new Error( `${ remoteBranches.length } branches found for issue ${ issueNumber }:\n${ remoteBranches.map( ( v, i ) => `${ i + 1 }. ${ v }` ).join( '\n' ) }\n\nRelaunch using: ${ chalk.cyan( command + ' --select-branch <name>' ) }` );
 		remoteBranchName = remoteBranches.find( x => x === selectBranch );
 		if ( !remoteBranchName )
 			throw new Error( `No branch named ${ selectBranch } exists for issue ${ issueNumber }` );
 	} else {
-		remoteBranchName = remoteBranches[0];
+		remoteBranchName = remoteBranches[ 0 ];
 	}
 
 	let [ , localBranchName ] = remoteBranchName.match( remoteRegEx );
@@ -82,7 +85,17 @@ async function handleCheckout( args ) {
 		console.info( chalk.green( `✔ Succesfully created and moved to branch ${ localBranchName }.` ) );
 	} else {
 		await execute( `git checkout ${ localBranchName }` );
-		console.info( chalk.green( `✔ Succesfully switched to local branch ${ localBranchName }.` ) );
+		[ err ] = await wrap( lodash.partial( execute,  `git merge --ff-only ${ remoteBranchName }` ) );
+		if ( err ) {
+			if ( rebase ) {
+				await execute( `git rebase ${ remoteBranchName } --autostash` ).catch( rethrow( `Failed to rebase on top of ${ remoteBranchName }` ) );
+				console.info( chalk.green( `✔ Succesfully updated local branch ${ localBranchName }.` ) );
+			} else {
+				rethrow( `Could not apply remote changes: History is non-fast forward.\nRebase using: ${ chalk.cyan( command + ' --rebase' ) }` )( err );
+			}
+		} else {
+			console.info( chalk.green( `✔ Succesfully switched to local branch ${ localBranchName }.` ) );
+		}
 	}
 
 
@@ -92,7 +105,7 @@ async function main() {
 
 	yargs
 		.scriptName( 'gfc' )
-		.command( '$0 <issue-number>', 'Checkouts a branch, given its GitLab issue number', {
+		.command( '$0 <issueNumber>', 'Checkouts a branch, given its GitLab issue number', {
 			issueNumber: {
 				type: 'number',
 				required: true
@@ -107,6 +120,10 @@ async function main() {
 				type: 'string',
 				hidden: true,
 				requiresArg: true
+			},
+			rebase: {
+				type: 'boolean',
+				hidden: true
 			}
 		}, handleCheckout )
 		.demandCommand()
