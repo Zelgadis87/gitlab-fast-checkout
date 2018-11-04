@@ -1,0 +1,70 @@
+extends: eslint:recommended
+
+parserOptions:
+    ecmaVersion: 8
+
+rules:
+
+    //// ECMAScript
+
+    // Possible Errors
+    no-extra-semi: warn
+    no-console: off
+
+    // Variables
+    no-unused-vars:
+        - warn
+        -
+            vars: all
+            args: none
+            caughtErrors: none
+
+
+    // Stylistic Issues
+    array-bracket-spacing:
+        - error
+        - always
+    block-spacing: error
+    brace-style: off
+    comma-dangle: warn
+    comma-spacing: error
+    comma-style:
+        - error
+        - last
+        - exceptions:
+            VariableDeclaration: true
+    consistent-this: off
+    func-call-spacing:
+        - error
+        - never
+    indent:
+        - error
+        - tab
+    keyword-spacing: error
+    linebreak-style:
+        - warn
+        - windows
+    max-depth:
+        - warn
+        - 4
+    max-len: off
+    max-lines: off
+    new-cap: error
+    new-parens: error
+    no-lonely-if: off
+    no-mixed-operators: error
+    no-mixed-spaces-and-tabs: error
+    no-multiple-empty-lines: error
+    no-trailing-spaces: warn
+    padded-blocks: off
+    quotes: off
+    semi: error
+
+    no-restricted-globals:
+        - error
+        - console
+        - Promise
+
+env:
+    node: true
+    es6: true

@@ -1,0 +1,7 @@
+Simple tool to switch to a GitLab automatically created branch.
+
+Workflow:
+1. Create an issue on GitLab
+2. Create merge request from issue page
+3. In the local project, run gfc <issue-number>
+4. The local project is now pointing at the desired branch
