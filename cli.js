@@ -51,31 +51,42 @@ function rethrow( reason ) {
 
 async function handleCheckout( args ) {
 
+	// Recreate the original command (for debug purposes only).
 	let command = [ args.$0, ...yargsUnparser( args, { command: '<issueNumber>', default: { remoteName: 'origin' } } ) ].join( ' ' );
-	let { remoteName, issueNumber, selectBranch, rebase } = args;
+	// console.debug( command );
 
+	// Parse arguments.
+	let { remoteName, issueNumber, selectBranch, rebase } = args;
+	console.debug( remoteName, issueNumber, selectBranch, rebase, args );
+
+	// Create a regexp that matches the expected branch name for the given issue.
 	const remoteRegEx = new RegExp( `^${ remoteName }/(${ issueNumber }-[A-z0-9-]+)$` );
 
+	// Try to fetch remote branches.
 	await gitFetchRemote( remoteName ).catch( rethrow( 'Failed to fetch remote repository' ) );
-	let remoteBranchesRaw = await execute( 'git branch -r' ).catch( rethrow( 'Failed to list remote branches' ) );
 
-	let remoteBranches = lodash( remoteBranchesRaw )
+	// Read all available branches.
+	let remoteBranchesRaw = await execute( 'git branch -r' ).catch( rethrow( 'Failed to list remote branches' ) );
+	let remoteBranches = lodash.chain( remoteBranchesRaw )
 		.split( '\n' )
 		.map( lodash.trim )
-		.filter( remoteRegEx.test.bind( remoteRegEx ) )
 		.value();
 
 	let remoteBranchName;
-	if ( remoteBranches.length === 0 ) {
-		throw new Error( `No branch found for issue ${ issueNumber }. Please ensure the issue number is correct and that a branch has been created using default name settings.` );
-	} else if ( remoteBranches.length > 1 ) {
-		if ( selectBranch === null )
-			throw new Error( `${ remoteBranches.length } branches found for issue ${ issueNumber }:\n${ remoteBranches.map( ( v, i ) => `${ i + 1 }. ${ v }` ).join( '\n' ) }\n\nRelaunch using: ${ chalk.cyan( command + ' --select-branch <name>' ) }` );
+	if ( selectBranch ) {
 		remoteBranchName = remoteBranches.find( x => x === selectBranch );
-		if ( !remoteBranchName )
-			throw new Error( `No branch named ${ selectBranch } exists for issue ${ issueNumber }` );
+		if ( !remoteBranchName ) {
+			throw new Error( `No branch named ${ selectBranch } exists.` );
+		}
 	} else {
-		remoteBranchName = remoteBranches[ 0 ];
+		let issueRemoteBranches = lodash.filter( remoteRegEx.test.bind( remoteRegEx ) );
+		if ( issueRemoteBranches.length === 0 ) {
+			throw new Error( `No branch found for issue ${ issueNumber }. Please ensure the issue number is correct and that a branch has been created using default name settings.` );
+		} else if ( issueRemoteBranches.length > 1 ) {
+			throw new Error( `${ issueRemoteBranches.length } branches found for issue ${ issueNumber }:\n${ issueRemoteBranches.map( ( v, i ) => `${ i + 1 }. ${ v }` ).join( '\n' ) }\n\nRelaunch using: ${ chalk.cyan( command + ' --select-branch <name>' ) }` );
+		} else {
+			remoteBranchName = issueRemoteBranches[0];
+		}
 	}
 
 	let [ , localBranchName ] = remoteBranchName.match( remoteRegEx );
@@ -98,21 +109,26 @@ async function handleCheckout( args ) {
 		}
 	}
 
-
 }
 
 async function main() {
 
 	yargs
 		.scriptName( 'gfc' )
-		.command( '$0 <issueNumber>', 'Checkouts a branch, given its GitLab issue number', {
+		.command( '$0 [issueNumber]', 'Checkouts a branch, given its GitLab issue number', {
 			issueNumber: {
 				type: 'number',
-				required: true
+				demandOption: true,
+				// demandOption: "Please specify the #issueNumber",
+				coerce: input => {
+					if (!input.match(/^\s*[1-9][0-9]*\s*$/))
+						throw new Error( 'Invalid issue number: integer expected, got: ' + input );
+					return parseInt(input);
+				}
 			},
 			remoteName: {
 				type: 'string',
-				required: true,
+				demandOption: "Please specify the remote name",
 				requiresArg: true,
 				default: 'origin'
 			},
@@ -126,8 +142,9 @@ async function main() {
 				hidden: true
 			}
 		}, handleCheckout )
-		.demandCommand()
+		.demandCommand(1, 1, 'Please specify a valid command.')
 		.help()
+		.strict()
 		.showHelpOnFail( false, 'Specify --help for available options' )
 		.parse( process.argv.slice( 2 ) );
 
