@@ -57,7 +57,7 @@ async function handleCheckout( args ) {
 
 	// Parse arguments.
 	let { remoteName, issueNumber, selectBranch, rebase } = args;
-	console.debug( remoteName, issueNumber, selectBranch, rebase, args );
+	// console.debug( remoteName, issueNumber, selectBranch, rebase, args );
 
 	// Create a regexp that matches the expected branch name for the given issue.
 	const remoteRegEx = new RegExp( `^${ remoteName }/(${ issueNumber }-[A-z0-9-]+)$` );
@@ -119,7 +119,6 @@ async function main() {
 			issueNumber: {
 				type: 'number',
 				demandOption: true,
-				// demandOption: "Please specify the #issueNumber",
 				coerce: input => {
 					if (!input.match(/^\s*[1-9][0-9]*\s*$/))
 						throw new Error( 'Invalid issue number: integer expected, got: ' + input );
