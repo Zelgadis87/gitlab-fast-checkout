@@ -79,7 +79,7 @@ async function handleCheckout( args ) {
 			throw new Error( `No branch named ${ selectBranch } exists.` );
 		}
 	} else {
-		let issueRemoteBranches = lodash.filter( remoteRegEx.test.bind( remoteRegEx ) );
+		let issueRemoteBranches = lodash.filter( remoteBranches, remoteRegEx.test.bind( remoteRegEx ) );
 		if ( issueRemoteBranches.length === 0 ) {
 			throw new Error( `No branch found for issue ${ issueNumber }. Please ensure the issue number is correct and that a branch has been created using default name settings.` );
 		} else if ( issueRemoteBranches.length > 1 ) {
