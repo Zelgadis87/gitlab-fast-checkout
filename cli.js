@@ -117,10 +117,10 @@ async function main() {
 		.scriptName( 'gfc' )
 		.command( '$0 [issueNumber]', 'Checkouts a branch, given its GitLab issue number', {
 			issueNumber: {
-				type: 'number',
+				type: 'string',
 				demandOption: true,
 				coerce: input => {
-					if (!input.match(/^\s*[1-9][0-9]*\s*$/))
+					if (!input.match(/^\s*#?[1-9][0-9]*\s*$/))
 						throw new Error( 'Invalid issue number: integer expected, got: ' + input );
 					return parseInt(input);
 				}
