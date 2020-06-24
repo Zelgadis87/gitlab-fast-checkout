@@ -6,17 +6,17 @@
   "author": "Zelgadis87",
   "license": "ISC",
   "devDependencies": {
-    "eslint": "^5.16.0"
+    "eslint": "^7.3.1"
   },
   "bin": {
     "gfc": "cli.js"
   },
   "dependencies": {
-    "bluebird": "^3.5.4",
-    "chalk": "^2.4.2",
-    "lodash": "^4.17.11",
-    "yargs": "^13.2.4",
-    "yargs-unparser": "^1.5.0"
+    "bluebird": "^3.7.2",
+    "chalk": "^4.1.0",
+    "lodash": "^4.17.15",
+    "yargs": "^15.3.1",
+    "yargs-unparser": "^1.6.3"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
